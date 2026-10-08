@@ -16,7 +16,7 @@ function ResearchHandler(db) {
             return needle.get(url, (error, newResponse, body) => {
                 if (!error && newResponse.statusCode === 200) {
                     res.writeHead(200, {
-                        "Content-Type": "text/html"
+                        "Content-Type": "text/plain"
                     });
                 }
                 res.write("<h1>The following is the stock information you requested.</h1>\n\n");
