@@ -93,7 +93,7 @@ function UserDAO(db) {
         };
 
         usersCol.findOne({
-            userName: asUserName(userName)
+            userName: asUserName(userName).toString()
         }, validateUserDoc);
     };
 
