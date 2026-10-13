@@ -13,6 +13,10 @@ function UserDAO(db) {
     }
 
     const usersCol = db.collection("users");
+    const asUserName = (v) => {
+        if (typeof v !== "string") throw new TypeError("Invalid user name");
+        return v;
+    };
 
     this.addUser = (userName, firstName, lastName, password, email, callback) => {
 
@@ -89,7 +93,7 @@ function UserDAO(db) {
         };
 
         usersCol.findOne({
-            userName: userName
+            userName: asUserName(userName)
         }, validateUserDoc);
     };
 
@@ -102,7 +106,7 @@ function UserDAO(db) {
 
     this.getUserByUserName = (userName, callback) => {
         usersCol.findOne({
-            userName: userName
+            userName: asUserName(userName)
         }, callback);
     };
 
