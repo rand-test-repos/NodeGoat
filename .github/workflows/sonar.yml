@@ -22,3 +22,5 @@ jobs:
         with:
           args: >
             -Dsonar.projectKey=rand-test-repos_NodeGoat
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
