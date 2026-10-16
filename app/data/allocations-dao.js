@@ -16,7 +16,7 @@ const AllocationsDAO = function(db){
     const userDAO = new UserDAO(db);
 
     this.update = (userId, stocks, funds, bonds, callback) => {
-        const parsedUserId = parseInt(userId);
+        const parsedUserId = Number.parseInt(userId);
 
         // Create allocations document
         const allocations = {
@@ -55,7 +55,7 @@ const AllocationsDAO = function(db){
     };
 
     this.getByUserIdAndThreshold = (userId, threshold, callback) => {
-        const parsedUserId = parseInt(userId);
+        const parsedUserId = Number.parseInt(userId);
 
         const searchCriteria = () => {
 

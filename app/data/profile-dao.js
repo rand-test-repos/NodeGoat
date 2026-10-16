@@ -76,7 +76,7 @@ function ProfileDAO(db) {
         */
 
         users.update({
-                _id: parseInt(userId)
+                _id: Number.parseInt(userId)
             }, {
                 $set: user
             },
@@ -93,7 +93,7 @@ function ProfileDAO(db) {
 
     this.getByUserId = (userId, callback) => {
         users.findOne({
-                _id: parseInt(userId)
+                _id: Number.parseInt(userId)
             },
             (err, user) => {
                 if (err) return callback(err, null);
