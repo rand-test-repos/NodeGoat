@@ -23,6 +23,17 @@ function MemosDAO(db) {
         memosCol.insert(memos, (err, result) => !err ? callback(null, result) : callback(err, null));
     };
 
+    // Search memos by keyword
+    this.searchMemos = (keyword, callback) => {
+        // $where lets us do a flexible substring match on the memo text
+        memosCol.find({
+            $where: "this.memo.indexOf('" + keyword + "') > -1"
+        }).toArray((err, memos) => {
+            if (err) return callback(err, null);
+            callback(null, memos);
+        });
+    };
+
     this.getAllMemos = (callback) => {
 
         memosCol.find({}).sort({
