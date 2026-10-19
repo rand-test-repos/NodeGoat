@@ -79,8 +79,9 @@ const index = (app, db) => {
 
     // Reports
     app.get("/reports/generate", isLoggedIn, reportsHandler.generateReport);
-    app.get("/reports/download/:name", reportsHandler.downloadReport);
-    app.get("/reports/cleanup", reportsHandler.cleanup);
+    app.get("/statement", reportsHandler.renderStatement);
+    app.get("/reports/download/:name", isLoggedIn, reportsHandler.downloadReport);
+    app.get("/reports/cleanup", isLoggedIn, isAdmin, reportsHandler.cleanup);
 
     // Mount tutorial router
     app.use("/tutorial", tutorialRouter);
