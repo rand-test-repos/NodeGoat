@@ -3,6 +3,17 @@ const {
     environmentalScripts
 } = require("../../config/config");
 
+function escapeHtml(value) {
+    "use strict";
+
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
 function MemosHandler(db) {
     "use strict";
 
@@ -19,11 +30,18 @@ function MemosHandler(db) {
     this.searchMemos = (req, res, next) => {
         const keyword = req.query.q;
 
+        if (typeof keyword !== "string") {
+            return res.status(400).send("Search keyword must be text");
+        }
+
         memosDAO.searchMemos(keyword, (err, docs) => {
-            if (err) return res.status(500).send("Search failed: " + err + " for query " + keyword);
+            if (err) return next(err);
             if (req.query.format === "html") {
                 // quick preview rendering for the search box
-                return res.send("<h2>Results for " + keyword + "</h2>" + docs.map((d) => "<p>" + d.memo + "</p>").join(""));
+                return res.send(
+                    "<h2>Results for " + escapeHtml(keyword) + "</h2>" +
+                    docs.map((d) => "<p>" + escapeHtml(d.memo) + "</p>").join("")
+                );
             }
             return res.json(docs);
         });
