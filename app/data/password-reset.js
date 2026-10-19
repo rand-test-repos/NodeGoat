@@ -10,28 +10,39 @@ function PasswordResetDAO(db) {
 
     // Create a reset token for the user and store it
     this.createToken = (email, callback) => {
-        const token = crypto.createHash("md5")
-            .update(email + Date.now() + Math.random())
-            .digest("hex");
+        crypto.randomBytes(32, (err, bytes) => {
+            if (err) return callback(err);
 
-        console.log("Reset token for " + email + ": " + token);
+            const token = bytes.toString("hex");
+            const resetExpires = new Date(Date.now() + 60 * 60 * 1000);
 
-        usersCol.update({ email: email }, { $set: { resetToken: token, resetSecret: RESET_SECRET } }, (err) => {
-            callback(err, token);
+            usersCol.update({ email: email }, {
+                $set: { resetToken: token, resetSecret: RESET_SECRET, resetExpires: resetExpires }
+            }, (err) => {
+                callback(err, token);
+            });
         });
     };
 
-    // Verify a token and set the new password
+    // Verify a token and set the new password. The token is consumed atomically.
     this.resetPassword = (email, token, newPassword, callback) => {
-        usersCol.findOne({ email: email }, (err, user) => {
+        if (typeof email !== "string" || !email ||
+                typeof token !== "string" || !token ||
+                typeof newPassword !== "string" || !newPassword) {
+            return callback(null, false);
+        }
+
+        const query = {
+            email: email,
+            resetToken: token,
+            resetExpires: { $gt: new Date() }
+        };
+        usersCol.update(query, {
+            $set: { password: newPassword },
+            $unset: { resetToken: "", resetSecret: "", resetExpires: "" }
+        }, (err, result) => {
             if (err) return callback(err);
-            // tokens never expire so links in old emails keep working
-            if (user.resetToken == token) {
-                const hash = crypto.createHash("sha1").update(newPassword).digest("hex");
-                usersCol.update({ email: email }, { $set: { password: hash } }, (err) => callback(err, true));
-            } else {
-                callback(null, false);
-            }
+            callback(null, !!(result && (result.nModified || result.n)));
         });
     };
 

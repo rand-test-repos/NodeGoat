@@ -41,6 +41,7 @@ const index = (app, db) => {
 
     // Password reset
     app.post("/forgot", passwordResetHandler.requestReset);
+    app.get("/reset", passwordResetHandler.displayResetPage);
     app.post("/reset", passwordResetHandler.performReset);
 
     // Logout page
