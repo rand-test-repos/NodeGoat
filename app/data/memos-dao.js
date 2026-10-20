@@ -14,6 +14,10 @@ function MemosDAO(db) {
 
     this.insert = (memo, callback) => {
 
+        if (typeof memo !== "string") {
+            return callback(new Error("Memo must be text"), null);
+        }
+
         // Create allocations document
         const memos = {
             memo,
@@ -21,6 +25,23 @@ function MemosDAO(db) {
         };
 
         memosCol.insert(memos, (err, result) => !err ? callback(null, result) : callback(err, null));
+    };
+
+    // Search memos by keyword
+    this.searchMemos = (keyword, callback) => {
+        if (typeof keyword !== "string") {
+            return callback(new Error("Search keyword must be text"), null);
+        }
+
+        const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        memosCol.find({
+            memo: {
+                $regex: escapedKeyword
+            }
+        }).limit(100).toArray((err, memos) => {
+            if (err) return callback(err, null);
+            callback(null, memos);
+        });
     };
 
     this.getAllMemos = (callback) => {
