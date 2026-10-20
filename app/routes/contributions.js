@@ -7,13 +7,40 @@ const {
 function parseContributionValue(input) {
     if (typeof input !== "string") return Number.NaN;
 
-    const normalized = input.trim().replace(/\s+/g, "");
-    if (!/^-?\d+(\.\d+)?([+-]\d+(\.\d+)?)*$/.test(normalized)) {
-        return Number.NaN;
-    }
+    // Whitespace is allowed around terms and operators, but not within a term.
+    const numberPattern = "(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?";
+    const expressionPattern = new RegExp("^\\s*[+-]?" + numberPattern +
+        "(?:\\s*[+-]\\s*" + numberPattern + ")*\\s*$");
+    if (!expressionPattern.test(input)) return Number.NaN;
 
-    const terms = normalized.match(/[+-]?\d+(\.\d+)?/g);
-    return terms.reduce((sum, term) => sum + Number.parseFloat(term), 0);
+    const normalized = input.trim().replace(/\s+/g, "");
+    const terms = normalized.match(new RegExp("[+-]?" + numberPattern, "g"));
+    const parsedTerms = terms.map(term => {
+        const sign = term[0] === "-" ? -1 : 1;
+        const unsignedTerm = term[0] === "+" || term[0] === "-" ? term.slice(1) : term;
+        const parts = unsignedTerm.split(/[eE]/);
+        const mantissa = parts[0];
+        const exponent = parts.length === 2 ? Number(parts[1]) : 0;
+        const decimalPlaces = mantissa.indexOf(".") === -1 ? 0 :
+            mantissa.length - mantissa.indexOf(".") - 1;
+        let scale = decimalPlaces - exponent;
+        let coefficient = sign * Number(mantissa.replace(".", ""));
+
+        if (scale < 0) {
+            coefficient *= Math.pow(10, -scale);
+            scale = 0;
+        }
+        return { coefficient, scale };
+    });
+
+    const scale = parsedTerms.reduce((maximum, term) => Math.max(maximum, term.scale), 0);
+    const scaledSum = parsedTerms.reduce((sum, term) => {
+        return sum + term.coefficient * Math.pow(10, scale - term.scale);
+    }, 0);
+
+    // Integer arithmetic above avoids binary floating-point artifacts such as 0.1 + 0.2.
+    const result = scaledSum / Math.pow(10, scale);
+    return Number.isFinite(result) && Number.isSafeInteger(scaledSum) ? result : Number.NaN;
 }
 
 /* The ContributionsHandler must be constructed with a connected db */
