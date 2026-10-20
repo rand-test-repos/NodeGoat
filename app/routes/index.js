@@ -5,6 +5,7 @@ const ContributionsHandler = require("./contributions");
 const AllocationsHandler = require("./allocations");
 const MemosHandler = require("./memos");
 const ResearchHandler = require("./research");
+const ProjectionsHandler = require("./projections");
 const tutorialRouter = require("./tutorial");
 const ErrorHandler = require("./error").errorHandler;
 
@@ -19,6 +20,7 @@ const index = (app, db) => {
     const allocationsHandler = new AllocationsHandler(db);
     const memosHandler = new MemosHandler(db);
     const researchHandler = new ResearchHandler(db);
+    const projectionsHandler = new ProjectionsHandler(db);
 
     // Middleware to check if a user is logged in
     const isLoggedIn = sessionHandler.isLoggedInMiddleware;
@@ -74,6 +76,11 @@ const index = (app, db) => {
 
     // Research Page
     app.get("/research", isLoggedIn, researchHandler.displayResearch);
+
+    // Projections
+    app.get("/projections/compare", isLoggedIn, projectionsHandler.compare);
+    app.get("/projections/average", isLoggedIn, projectionsHandler.average);
+    app.get("/projections/:userId", isLoggedIn, projectionsHandler.getProjection);
 
     // Mount tutorial router
     app.use("/tutorial", tutorialRouter);

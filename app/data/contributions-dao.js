@@ -71,6 +71,7 @@ function ContributionsDAO(db) {
                 userDAO.getUserById(userId, (err, user) => {
 
                     if (err) return callback(err, null);
+                    if (!user) return callback(null, null);
                     contributions.userName = user.userName;
                     contributions.firstName = user.firstName;
                     contributions.lastName = user.lastName;
