@@ -1,7 +1,69 @@
+/* global BigInt */
 const ContributionsDAO = require("../data/contributions-dao").ContributionsDAO;
 const {
     environmentalScripts
 } = require("../../config/config");
+
+// Accepts a plain number or a simple sum/difference of numbers, e.g. "10+2.5" or "15-3"
+function parseContributionValue(input) {
+    if (typeof input !== "string") return Number.NaN;
+
+    // Keep exponentiation and decimal conversion within practical bounds.
+    const maxScale = 324;
+
+    // Whitespace is allowed around terms and operators, but not within a term.
+    const numberPattern = "(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?";
+    const expressionPattern = new RegExp("^\\s*[+-]?" + numberPattern +
+        "(?:\\s*[+-]\\s*" + numberPattern + ")*\\s*$");
+    if (!expressionPattern.test(input)) return Number.NaN;
+
+    const normalized = input.trim().replace(/\s+/g, "");
+    const terms = normalized.match(new RegExp("[+-]?" + numberPattern, "g"));
+    const parsedTerms = terms.map(term => {
+        const sign = term[0] === "-" ? -1 : 1;
+        const unsignedTerm = term[0] === "+" || term[0] === "-" ? term.slice(1) : term;
+        const parts = unsignedTerm.split(/[eE]/);
+        const mantissa = parts[0];
+        const exponent = parts.length === 2 ? Number(parts[1]) : 0;
+        if (!Number.isSafeInteger(exponent) || Math.abs(exponent) > maxScale) {
+            return { invalid: true };
+        }
+
+        // Remove insignificant zeros before determining the scale. This keeps
+        // valid values such as 10.000000000000000 from creating huge integers.
+        const mantissaParts = mantissa.split(".");
+        const fractionalPart = (mantissaParts[1] || "").replace(/0+$/, "");
+        const digits = mantissaParts[0] + fractionalPart;
+        const decimalPlaces = fractionalPart.length;
+        const scale = decimalPlaces - exponent;
+        if (!Number.isSafeInteger(scale) || Math.abs(scale) > maxScale) {
+            return { invalid: true };
+        }
+
+        let coefficient = BigInt(digits) * BigInt(sign);
+        if (scale < 0) {
+            coefficient *= BigInt(10) ** BigInt(-scale);
+        }
+        return { coefficient, scale: Math.max(scale, 0) };
+    });
+
+    if (parsedTerms.some(term => term.invalid)) return Number.NaN;
+
+    const scale = parsedTerms.reduce((maximum, term) => Math.max(maximum, term.scale), 0);
+    const scaledSum = parsedTerms.reduce((sum, term) => {
+        return sum + term.coefficient * BigInt(10) ** BigInt(scale - term.scale);
+    }, BigInt(0));
+
+    // Keep the arithmetic exact, and only convert once the result is known to
+    // fit in the range accepted by the original validation.
+    const maxSafeInteger = BigInt(Number.MAX_SAFE_INTEGER);
+    if (scaledSum < -maxSafeInteger || scaledSum > maxSafeInteger) return Number.NaN;
+    // Scientific notation avoids Math.pow(10, scale) becoming Infinity for
+    // finite, nonzero values at the low end of the Number range.
+    const result = Number(`${scaledSum}e-${scale}`);
+    if (scaledSum !== BigInt(0) && result === 0) return Number.NaN;
+    return Number.isFinite(result) ? result : Number.NaN;
+}
 
 /* The ContributionsHandler must be constructed with a connected db */
 function ContributionsHandler(db) {
@@ -27,18 +89,11 @@ function ContributionsHandler(db) {
 
     this.handleContributionsUpdate = (req, res, next) => {
 
-        /*jslint evil: true */
-        // Insecure use of eval() to parse inputs
-        const preTax = eval(req.body.preTax);
-        const afterTax = eval(req.body.afterTax);
-        const roth = eval(req.body.roth);
 
-        /*
-        //Fix for A1 -1 SSJS Injection attacks - uses alternate method to eval
-        const preTax = parseInt(req.body.preTax);
-        const afterTax = parseInt(req.body.afterTax);
-        const roth = parseInt(req.body.roth);
-        */
+        const preTax = parseContributionValue(req.body.preTax);
+        const afterTax = parseContributionValue(req.body.afterTax);
+        const roth = parseContributionValue(req.body.roth);
+
         const {
             userId
         } = req.session;
