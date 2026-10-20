@@ -22,9 +22,5 @@ jobs:
           args: >
             -Dsonar.projectKey=rand-test-repos_NodeGoat
             -Dsonar.projectName=rand-test-repos_NodeGoat
-            -Dsonar.python.version=3.11
-            -Dsonar.sources=.
-            -Dsonar.tests=.
-            -Dsonar.test.inclusions=**/tests.py
             -Dsonar.qualitygate.wait=true
             -Dsonar.qualitygate.timeout=300
