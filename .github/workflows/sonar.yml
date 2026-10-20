@@ -1,0 +1,31 @@
+name: Sonar Analysis
+
+on:
+  push:
+    branches:
+      - master
+      - 'feat/**'
+
+jobs:
+  sonar:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sqs-dce-shichao.ngrok.io
+        with:
+          args: >
+            -Dsonar.projectKey=rand-test-repos_PyGoat
+            -Dsonar.projectName=rand-test-repos_NodeGoat
+            -Dsonar.python.version=3.11
+            -Dsonar.sources=.
+            -Dsonar.tests=.
+            -Dsonar.test.inclusions=**/tests.py
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
