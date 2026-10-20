@@ -8,6 +8,9 @@ const {
 function parseContributionValue(input) {
     if (typeof input !== "string") return Number.NaN;
 
+    // Keep exponentiation and decimal conversion within practical bounds.
+    const maxScale = 324;
+
     // Whitespace is allowed around terms and operators, but not within a term.
     const numberPattern = "(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?";
     const expressionPattern = new RegExp("^\\s*[+-]?" + numberPattern +
@@ -22,7 +25,9 @@ function parseContributionValue(input) {
         const parts = unsignedTerm.split(/[eE]/);
         const mantissa = parts[0];
         const exponent = parts.length === 2 ? Number(parts[1]) : 0;
-        if (!Number.isSafeInteger(exponent)) return { invalid: true };
+        if (!Number.isSafeInteger(exponent) || Math.abs(exponent) > maxScale) {
+            return { invalid: true };
+        }
 
         // Remove insignificant zeros before determining the scale. This keeps
         // valid values such as 10.000000000000000 from creating huge integers.
@@ -31,7 +36,9 @@ function parseContributionValue(input) {
         const digits = mantissaParts[0] + fractionalPart;
         const decimalPlaces = fractionalPart.length;
         const scale = decimalPlaces - exponent;
-        if (!Number.isSafeInteger(scale)) return { invalid: true };
+        if (!Number.isSafeInteger(scale) || Math.abs(scale) > maxScale) {
+            return { invalid: true };
+        }
 
         let coefficient = BigInt(digits) * BigInt(sign);
         if (scale < 0) {
@@ -51,7 +58,10 @@ function parseContributionValue(input) {
     // fit in the range accepted by the original validation.
     const maxSafeInteger = BigInt(Number.MAX_SAFE_INTEGER);
     if (scaledSum < -maxSafeInteger || scaledSum > maxSafeInteger) return Number.NaN;
-    const result = Number(scaledSum) / Math.pow(10, scale);
+    // Scientific notation avoids Math.pow(10, scale) becoming Infinity for
+    // finite, nonzero values at the low end of the Number range.
+    const result = Number(`${scaledSum}e-${scale}`);
+    if (scaledSum !== BigInt(0) && result === 0) return Number.NaN;
     return Number.isFinite(result) ? result : Number.NaN;
 }
 
