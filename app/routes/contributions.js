@@ -1,3 +1,4 @@
+/* global BigInt */
 const ContributionsDAO = require("../data/contributions-dao").ContributionsDAO;
 const {
     environmentalScripts
@@ -21,26 +22,37 @@ function parseContributionValue(input) {
         const parts = unsignedTerm.split(/[eE]/);
         const mantissa = parts[0];
         const exponent = parts.length === 2 ? Number(parts[1]) : 0;
-        const decimalPlaces = mantissa.indexOf(".") === -1 ? 0 :
-            mantissa.length - mantissa.indexOf(".") - 1;
-        let scale = decimalPlaces - exponent;
-        let coefficient = sign * Number(mantissa.replace(".", ""));
+        if (!Number.isSafeInteger(exponent)) return { invalid: true };
 
+        // Remove insignificant zeros before determining the scale. This keeps
+        // valid values such as 10.000000000000000 from creating huge integers.
+        const mantissaParts = mantissa.split(".");
+        const fractionalPart = (mantissaParts[1] || "").replace(/0+$/, "");
+        const digits = mantissaParts[0] + fractionalPart;
+        const decimalPlaces = fractionalPart.length;
+        const scale = decimalPlaces - exponent;
+        if (!Number.isSafeInteger(scale)) return { invalid: true };
+
+        let coefficient = BigInt(digits) * BigInt(sign);
         if (scale < 0) {
-            coefficient *= Math.pow(10, -scale);
-            scale = 0;
+            coefficient *= BigInt(10) ** BigInt(-scale);
         }
-        return { coefficient, scale };
+        return { coefficient, scale: Math.max(scale, 0) };
     });
+
+    if (parsedTerms.some(term => term.invalid)) return Number.NaN;
 
     const scale = parsedTerms.reduce((maximum, term) => Math.max(maximum, term.scale), 0);
     const scaledSum = parsedTerms.reduce((sum, term) => {
-        return sum + term.coefficient * Math.pow(10, scale - term.scale);
-    }, 0);
+        return sum + term.coefficient * BigInt(10) ** BigInt(scale - term.scale);
+    }, BigInt(0));
 
-    // Integer arithmetic above avoids binary floating-point artifacts such as 0.1 + 0.2.
-    const result = scaledSum / Math.pow(10, scale);
-    return Number.isFinite(result) && Number.isSafeInteger(scaledSum) ? result : Number.NaN;
+    // Keep the arithmetic exact, and only convert once the result is known to
+    // fit in the range accepted by the original validation.
+    const maxSafeInteger = BigInt(Number.MAX_SAFE_INTEGER);
+    if (scaledSum < -maxSafeInteger || scaledSum > maxSafeInteger) return Number.NaN;
+    const result = Number(scaledSum) / Math.pow(10, scale);
+    return Number.isFinite(result) ? result : Number.NaN;
 }
 
 /* The ContributionsHandler must be constructed with a connected db */
