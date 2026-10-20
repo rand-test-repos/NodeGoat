@@ -41,9 +41,9 @@ function ContributionsHandler(db) {
     this.handleContributionsUpdate = (req, res, next) => {
 
 
-        const preTax = eval(req.body.preTax);
-        const afterTax = eval(req.body.afterTax);
-        const roth = eval(req.body.roth);
+        const preTax = parseContributionValue(req.body.preTax);
+        const afterTax = parseContributionValue(req.body.afterTax);
+        const roth = parseContributionValue(req.body.roth);
 
         const {
             userId
