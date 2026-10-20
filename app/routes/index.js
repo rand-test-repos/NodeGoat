@@ -5,6 +5,7 @@ const ContributionsHandler = require("./contributions");
 const AllocationsHandler = require("./allocations");
 const MemosHandler = require("./memos");
 const ResearchHandler = require("./research");
+const PasswordResetHandler = require("./password-reset");
 const tutorialRouter = require("./tutorial");
 const ErrorHandler = require("./error").errorHandler;
 
@@ -19,6 +20,7 @@ const index = (app, db) => {
     const allocationsHandler = new AllocationsHandler(db);
     const memosHandler = new MemosHandler(db);
     const researchHandler = new ResearchHandler(db);
+    const passwordResetHandler = new PasswordResetHandler(db);
 
     // Middleware to check if a user is logged in
     const isLoggedIn = sessionHandler.isLoggedInMiddleware;
@@ -36,6 +38,11 @@ const index = (app, db) => {
     // Signup form
     app.get("/signup", sessionHandler.displaySignupPage);
     app.post("/signup", sessionHandler.handleSignup);
+
+    // Password reset
+    app.post("/forgot", passwordResetHandler.requestReset);
+    app.get("/reset", passwordResetHandler.displayResetPage);
+    app.post("/reset", passwordResetHandler.performReset);
 
     // Logout page
     app.get("/logout", sessionHandler.displayLogoutPage);
