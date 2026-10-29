@@ -7,7 +7,7 @@ const session = require("express-session");
 // const csrf = require('csurf');
 const consolidate = require("consolidate"); // Templating library adapter for Express
 const swig = require("swig");
-// const helmet = require("helmet");
+const helmet = require("helmet");
 const MongoClient = require("mongodb").MongoClient; // Driver for connecting to MongoDB
 const http = require("http");
 const marked = require("marked");
@@ -65,6 +65,7 @@ MongoClient.connect(db, (err, db) => {
     */
 
     // Adding/ remove HTTP Headers for security
+    app.use(helmet());
     app.use(favicon(__dirname + "/app/assets/favicon.ico"));
 
     // Express middleware to populate "req.body" so we can access POST variables
