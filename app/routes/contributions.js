@@ -29,7 +29,15 @@ function ContributionsHandler(db) {
 
         /*jslint evil: true */
         // Insecure use of eval() to parse inputs
-        const preTax = eval(req.body.preTax);
+        const parsePercentage = value => {
+            if (typeof value !== "string" || value.trim() === "") {
+                return NaN;
+            }
+            return Number(value);
+        };
+
+        const preTax = parsePercentage(req.body.preTax);
+        
         const afterTax = eval(req.body.afterTax);
         const roth = eval(req.body.roth);
 
